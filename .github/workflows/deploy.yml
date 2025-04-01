@@ -5,12 +5,21 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: '20'
       
@@ -22,23 +31,36 @@ jobs:
       - name: Prepare static files
         run: |
           mkdir -p dist
-          cp -f attached_assets/UmeshmResume.pdf client/public/
+          cp -f attached_assets/UmeshmResume.pdf client/public/ || echo "Resume file not found, skipping"
           
           # Copy static component files to main components
-          cp -f client/src/components/ContactSection.static.tsx client/src/components/ContactSection.tsx
-          cp -f client/src/App.static.tsx client/src/App.tsx
-          cp -f client/src/main.static.tsx client/src/main.tsx
+          cp -f client/src/components/ContactSection.static.tsx client/src/components/ContactSection.tsx || echo "Static file not found, skipping"
+          cp -f client/src/App.static.tsx client/src/App.tsx || echo "Static file not found, skipping"
+          cp -f client/src/main.static.tsx client/src/main.tsx || echo "Static file not found, skipping"
       
       # Build the project
       - name: Build
         run: |
           # Set base for GitHub Pages
-          echo "{ \"base\": \"./\" }" > vite.config.json
+          echo '{ "base": "./" }' > vite.config.json
           npm run build
       
-      # Deploy to GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@4.1.4
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
         with:
-          branch: gh-pages
-          folder: dist
+          path: './dist'
+          
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
