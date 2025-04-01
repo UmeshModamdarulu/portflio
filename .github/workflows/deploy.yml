@@ -20,63 +20,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Prepare static files
-        run: |
-          # Copy resume to public folder
-          mkdir -p client/public
-          cp -f attached_assets/UmeshmResume.pdf client/public/ || echo "Resume file not found, skipping"
-          
-          # Use static versions of components
-          cp -f client/src/components/ContactSection.static.tsx client/src/components/ContactSection.tsx || echo "Static contact file not found, skipping"
-          cp -f client/src/App.static.tsx client/src/App.tsx || echo "Static App file not found, skipping"
-          cp -f client/src/main.static.tsx client/src/main.tsx || echo "Static main file not found, skipping"
-      
-      - name: Update Vite Config
-        run: |
-          cat > vite.config.ts << 'EOL'
-          import { defineConfig } from 'vite';
-          import react from '@vitejs/plugin-react';
-          import { cartographer } from '@replit/vite-plugin-cartographer';
-          import { runtimeErrorModal } from '@replit/vite-plugin-runtime-error-modal';
-          import { themeShadcnFromJSON } from '@replit/vite-plugin-shadcn-theme-json';
-          import path from 'path';
-          
-          export default defineConfig({
-            base: '/portflio/', // This is important for GitHub Pages
-            plugins: [
-              react(),
-              cartographer({ addPlugin: false }),
-              runtimeErrorModal(),
-              themeShadcnFromJSON({
-                themeJSONPath: path.join(__dirname, 'theme.json'),
-              }),
-            ],
-            server: {
-              host: '0.0.0.0',
-              hmr: {
-                clientPort: 443,
-              },
-            },
-            resolve: {
-              alias: {
-                '@': path.resolve(__dirname, './client/src'),
-                '@components': path.resolve(__dirname, './client/src/components'),
-                '@lib': path.resolve(__dirname, './client/src/lib'),
-                '@hooks': path.resolve(__dirname, './client/src/hooks'),
-                '@assets': path.resolve(__dirname, './attached_assets'),
-                '@shared': path.resolve(__dirname, './shared'),
-              },
-            },
-          });
-          EOL
-      
-      - name: Build
-        run: npm run build
-          
-      - name: Create 404.html
-        run: |
-          # Create a 404.html that redirects to index.html for SPA routing
-          cp dist/index.html dist/404.html
+      - name: Run deployment script
+        run: node deploy.js
           
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
