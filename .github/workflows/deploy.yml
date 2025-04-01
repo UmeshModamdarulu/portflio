@@ -1,0 +1,44 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+      
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+      
+      # Special build for GitHub Pages
+      - name: Prepare static files
+        run: |
+          mkdir -p dist
+          cp -f attached_assets/UmeshmResume.pdf client/public/
+          
+          # Copy static component files to main components
+          cp -f client/src/components/ContactSection.static.tsx client/src/components/ContactSection.tsx
+          cp -f client/src/App.static.tsx client/src/App.tsx
+          cp -f client/src/main.static.tsx client/src/main.tsx
+      
+      # Build the project
+      - name: Build
+        run: |
+          # Set base for GitHub Pages
+          echo "{ \"base\": \"./\" }" > vite.config.json
+          npm run build
+      
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          branch: gh-pages
+          folder: dist
